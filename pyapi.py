@@ -155,6 +155,11 @@ def find_center_and_locate(original_image_path, cropped_image_path):
     
     return center_original, center_cropped, located_center, original_image, cropped_image
 
+
+@app.route("/")
+def home():
+    return "Revaastu Flask Server Running."
+
 @app.route('/process_images', methods=['POST'])
 def process_imageses():
 ##    try:
@@ -538,4 +543,5 @@ def overlay_images_function(main_image, top_image):
     return result
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0')
+    # app.run(host='0.0.0.0')
+    app.run(debug=True, port=33507)
