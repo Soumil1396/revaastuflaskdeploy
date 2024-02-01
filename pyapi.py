@@ -256,7 +256,13 @@ def tropinmain():
         # main_image.show() #orientation fix
         print("fixingOrientation")
         # otc = fix_image_orientation(main_image) 
-        otm = main_image.rotate(270, expand=True)
+        # otm = main_image.rotate(270, expand=True)
+        if main_image.size[0] > main_image.size[1]:
+            print("This is expected to fail. But program to handle it is working, so hold tight!!")
+            otm = main_image.rotate(270, expand=True)
+        else:
+            print("This is successful. No worries!!")
+            otm = fix_image_orientation(main_image)
         print("opening otm")
         # otm.show()
         # cropped_image.show()
