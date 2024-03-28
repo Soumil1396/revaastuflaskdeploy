@@ -162,58 +162,41 @@ def home():
 
 @app.route('/process_images', methods=['POST'])
 def process_imageses():
-##    try:
-        print("hit")
-        # Get file paths from the request
-        original_path = request.form['original_image']
-        cropped_path = request.form['cropped_image']
-        compass_path = request.form['cropped_image']
-        
-        # Decode base64 strings into image data
-        original_image_data = base64.b64decode(original_path)
-        cropped_image_data = base64.b64decode(cropped_path)
-        compass = base64.b64decode(compass_path)
-        print("decoded")
+    # Get file paths from the request
+    original_path = request.form['original_image']
+    cropped_path = request.form['cropped_image']
+    
+    # Decode base64 strings into image data
+    original_image_data = base64.b64decode(original_path)
+    cropped_image_data = base64.b64decode(cropped_path)
 
-        # Open images using Pillow
-        original_image = Image.open(BytesIO(original_image_data))
-        cropped_image = Image.open(BytesIO(cropped_image_data))
-        compass_image = Image.open(BytesIO(compass))
+    # Open images using OpenCV
+    original_image = cv2.imdecode(np.frombuffer(original_image_data, np.uint8), cv2.IMREAD_COLOR)
+    cropped_image = cv2.imdecode(np.frombuffer(cropped_image_data, np.uint8), cv2.IMREAD_COLOR)
 
-        print("fixing image orientation")
+    # Find the center of the cropped image
+    cropped_center = (cropped_image.shape[1] // 2, cropped_image.shape[0] // 2)
 
-         # Fix image orientation
-        original_imagefin = fix_image_orientation(original_image)
-        cropped_imagefin = fix_image_orientation(cropped_image)
-        compass_fix = fix_image_orientation(compass_image)
+    # Find the location of the cropped image in the original image
+    result = cv2.matchTemplate(original_image, cropped_image, cv2.TM_CCOEFF_NORMED)
+    _, _, _, max_loc = cv2.minMaxLoc(result)
 
-        print("open pillow")
+    # Calculate the center of the located region
+    located_center = (max_loc[0] + cropped_center[0], max_loc[1] + cropped_center[1])
 
-        # Display the images (for demonstration purposes)
-        original_imagefin.show()
-        cropped_imagefin.show()
-        compass_fix.show()
-
-        print("goin for the centers")
-##        main_path = request.files['main_image']
-##        print("main_path", main_path)
-##        print(original_path, cropped_path, "BASEING64iNG")
-##        print("ho gya image mil gayi")
-
-        # Call the image processing function
-        center_original, center_cropped, located_center, _, _ = find_center_and_locate(original_path, cropped_path)
-
-        # # Return the coordinates as a JSON response
-        response = {
-             'center_original': center_original,
-             'center_cropped': center_cropped,
-             'located_center': located_center
-        }
-
-        return jsonify(response)
-
-##    except Exception as e:
-##        return jsonify({'error': str(e)}), 500
+    # Mark the center of the cropped image on the original image with a red circle
+    marked_image = original_image.copy()
+    radius = 20
+    color = (0, 0, 128)  # Maroon color in BGR
+    thickness = -1  # Filled circle
+    marked_image = cv2.circle(marked_image, located_center, radius, color, thickness)
+    # Save the marked image temporarily
+    cv2.imwrite('marked_image.png', marked_image)
+    # Convert the marked image to base64
+    _, encoded_image = cv2.imencode('.png', marked_image)
+    marked_image_base64 = base64.b64encode(encoded_image).decode('utf-8')
+    print("encoded")
+    return jsonify({ "marked_image_base64": marked_image_base64})
 
 def overlay_images_on_cropped_region(main_image, top_image, crop_position):
     print("cropped positions", crop_position)
@@ -470,6 +453,7 @@ def process_images():
 
     # Resize the compass image to the fixed width and height
     compass_imagefin = compass_imagefin.resize((fixed_compass_width, fixed_compass_height), Image.BICUBIC)
+    # compass_imagefin = compass_imagefin.resize((cropped_width, cropped_height), Image.BICUBIC)
     print("angle>>",angle)
     # Convert the angle to a float
     angle = float(angle)
@@ -549,5 +533,5 @@ def overlay_images_function(main_image, top_image):
     return result
 
 if __name__ == '__main__':
-    # app.run(host='0.0.0.0')
-    app.run(port=33507)
+    app.run(host='0.0.0.0')
+    # app.run(port=33507)
